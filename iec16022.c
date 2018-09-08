@@ -1,4 +1,5 @@
 // IEC16022 bar code generation
+// Copyright (c) 2007 Adrian Kennard Andrews & Arnold Ltd
 // This software is provided under the terms of the GPL v2 or later.
 // This software is provided free of charge with a full "Money back" guarantee.
 // Use entirely at your own risk. We accept no liability. If you don't like that - don't use it.
@@ -74,21 +75,24 @@ main (int argc, const char *argv[])
 {
    int c;
    int W = 0,
-      H = 0,
-      S = 1;
+      H = 0;
    int ecc = 0;
    int barcodelen = 0;
-   char *encoding = 0;
-   char *outfile = 0;
-   char *infile = 0;
-   char *barcode = 0;
-   char *format = "t";
-   char *size = 0;
-   char *eccstr = 0;
+   char *encoding = NULL;
+   char *outfile = NULL;
+   char *infile = NULL;
+   char *barcode = NULL;
+   char *format = NULL;
+   char *size = NULL;
+   char *eccstr = NULL;
    int len = 0,
       maxlen = 0,
       ecclen = 0,
       square = 1;
+   int formatcode = 0;
+   double scale = -1,
+      dpi = -1;
+   int S = -1;
    unsigned char *grid = 0;
    poptContext optCon;          // context for parsing command-line options
    const struct poptOption optionsTable[] = {
@@ -101,12 +105,27 @@ main (int argc, const char *argv[])
       {
        "infile", 'i', POPT_ARG_STRING, &infile, 0, "Barcode file", "filename"},
       {
-       "outfile", 'o', POPT_ARG_STRING, &outfile, 0, "Output filename", "filename or - or data:"},
+       "outfile", 'o', POPT_ARG_STRING, &outfile, 0, "Output filename", "filename or -"},
       {
        "encoding", 'e', POPT_ARG_STRING, &encoding, 0, "Encoding template", "[CTXEAB]* for ecc200 or 11/27/41/37/128/256"},
-      {
-       "format", 'f', POPT_ARGFLAG_SHOW_DEFAULT | POPT_ARG_STRING, &format, 0, "Output format",
-       "x=size/i=info/t[s]=text/e[s]=EPS/b=bin/h[s]=hex/p[s]=PNG/s=stamp/g[s]=ps"},
+      {"svg", 0, POPT_ARG_VAL, &formatcode, 'v', "SVG"},
+      {"path", 0, POPT_ARG_VAL, &formatcode, 'V', "SVG path"},
+      {"png", 0, POPT_ARG_VAL, &formatcode, 'p', "PNG"},
+      {"data", 0, POPT_ARG_VAL, &formatcode, 'd', "PNG Data URI"},
+      {"eps", 0, POPT_ARG_VAL, &formatcode, 'e', "EPS"},
+      {"ps", 0, POPT_ARG_VAL, &formatcode, 'g', "Postscript"},
+      {"text", 0, POPT_ARG_VAL, &formatcode, 't', "Text"},
+      {"binary", 0, POPT_ARG_VAL, &formatcode, 'b', "Binary"},
+      {"hex", 0, POPT_ARG_VAL, &formatcode, 'h', "Hex"},
+      {"stamp", 0, POPT_ARG_VAL, &formatcode, 's', "Stamp"},
+      {"info", 0, POPT_ARG_VAL, &formatcode, 'i', "Info"},
+      {"size", 0, POPT_ARG_VAL, &formatcode, 'x', "Size"},
+      {"scale", 0, POPT_ARG_INT, &S, 0, "Scale", "pixels"},
+      {"mm", 0, POPT_ARG_DOUBLE, &scale, 0, "Size of pixels", "mm"},
+      {"dpi", 0, POPT_ARG_DOUBLE, &dpi, 0, "Size of pixels", "dpi"},
+      {"format", 'f', POPT_ARGFLAG_DOC_HIDDEN | POPT_ARG_STRING, &format, 0, "Output format",
+       "x=size/t[s]=text/e[s]=EPS/b=bin/h[s]=hex/p[s]=PNG/g[s]=ps/v[s]=svg/s=stamp"},
+
       POPT_AUTOHELP {
                      NULL, 0, 0, NULL, 0}
    };
@@ -122,13 +141,39 @@ main (int argc, const char *argv[])
       poptPrintUsage (optCon, stderr, 0);
       return -1;
    }
-   if (outfile && strcmp (outfile, "-") && strcmp (outfile, "data:") && !freopen (outfile, "w", stdout))
+   if (outfile && !strcmp (outfile, "data:"))
+   {                            // Legacy format for data:
+      if (*format != 'p')
+         errx (1, "data: only for png");
+      outfile = NULL;
+      *format = 'd';
+   }
+   if (outfile && strcmp (outfile, "-") && !freopen (outfile, "w", stdout))
       err (1, outfile);
+   if (formatcode && format)
+      errx (1, "--format is deprecated");
+   char formatspace[2] = { };
+   if (formatcode)
+      *(format = formatspace) = formatcode;
+   if (!format)
+      format = "t";             // Default
 
-   if (*format)
+   if (scale >= 0 && dpi >= 0)
+      errx (1, "--mm or --dpi");
+   if (dpi > 0)
+      scale = 25.4 / dpi;
+   if (scale >= 0 && S >= 0 && *format != 'e' && *format != 'g')
+      errx (1, "--scale or --mm/--dpi");
+
+   if (format && *format && format[1])  // Old scale after format
       S = atoi (format + 1);    // scale
+   if (S < 0)
+      S = scale;
    if (S <= 0)
       S = 1;
+   if (scale < 0)
+      scale = 0;
+
 
    if (infile)
    {                            // read from file
@@ -314,12 +359,14 @@ main (int argc, const char *argv[])
       }
       break;
    case 'e':                   // EPS
-      printf ("%%!PS-Adobe-3.0 EPSF-3.0\n" "%%%%Creator: IEC16022 barcode/stamp generator\n" "%%%%BarcodeData: %s\n"
-              "%%%%BarcodeSize: %dx%d\n" "%%%%BarcodeFormat: ECC200\n" "%%%%DocumentData: Clean7Bit\n" "%%%%LanguageLevel: 1\n"
-              "%%%%Pages: 1\n" "%%%%BoundingBox: 0 0 %d %d\n" "%%%%EndComments\n" "%%%%Page: 1 1\n", barcode, W * S, H * S,
-              (W + 2) * S, (H + 2) * S);
+      printf ("%%!PS-Adobe-3.0 EPSF-3.0\n" "%%%%Creator: IEC18004 barcode/stamp generator\n" "%%%%BarcodeData: %s\n"
+              "%%%%BarcodeSize: %dx%d\n" "%%%%DocumentData: Clean7Bit\n" "%%%%LanguageLevel: 1\n"
+              "%%%%Pages: 1\n" "%%%%BoundingBox: 0 0 %d %d\n" "%%%%EndComments\n" "%%%%Page: 1 1\n", barcode, (W + 2) * S,
+              (H + 2) * S, (int) ((double) (W + 2) * (scale * 72 / 25.4 ? : S) + .99),
+              (int) ((double) (H + 2) * (scale * 72 / 25.4 ? : S) + 0.99));
    case 'g':                   // PS
-      //printf ("%d %d 1[1 0 0 1 -%d -%d]{<\n", W * S, H * S, S, S);
+      if (scale)
+         printf ("%.4f dup scale ", (scale * 72 / 25.4 / S));
       printf ("%d %d 1[1 0 0 1 0 0]{<\n", (W + 2) * S, (H + 2) * S);
       dumphex (grid, W, H, 0xFF, S, 1);
       printf (">}image\n");
@@ -406,6 +453,26 @@ main (int argc, const char *argv[])
          printf ("end restore\n");
       }
       break;
+   case 'v':                   // svg
+      {
+         int x,
+           y;
+         Image *i;
+         i = ImageNew (W + 2, H + 2, 2);
+         i->Colour[0] = 0xFFFFFF;
+         i->Colour[1] = 0;
+         for (y = 0; y < H; y++)
+            for (x = 0; x < W; x++)
+               if (grid[(H - 1 - y) * W + x] & 1)
+                  ImagePixel (i, x + 1, H + 1 - y - 1) = 1;
+         if (isupper (*format))
+            ImageSVGPath (i, stdout, 1);
+         else
+            ImageWriteSVG (i, fileno (stdout), 0, -1, barcode, scale);
+         ImageFree (i);
+      }
+      break;
+   case 'd':                   // data: URI
    case 'p':                   // png
       {
          int x,
@@ -417,7 +484,7 @@ main (int argc, const char *argv[])
             for (x = 0; x < W * S; x++)
                if (grid[(y / S) * W + (x / S)])
                   ImagePixel (i, x + S, ((H + 1) * S) - y - 1) = 1;
-         if (outfile && !strcmp (outfile, "data:"))
+         if (*format == 'd')
          {
             char tmp[] = "/tmp/XXXXXX";
             int fh = mkstemp (tmp);
@@ -467,5 +534,6 @@ main (int argc, const char *argv[])
       errx (1, "Unknown output format %s\n", format);
       break;
    }
+
    return 0;
 }
