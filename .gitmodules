@@ -1,0 +1,6 @@
+[submodule "Image"]
+	path = Image
+	url = https://github.com/revk/Image
+[submodule "Reedsol"]
+	path = Reedsol
+	url = https://github.com/revk/Reedsol
