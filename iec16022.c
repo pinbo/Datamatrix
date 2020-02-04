@@ -349,11 +349,11 @@ main (int argc, const char *argv[])
    case 't':                   // text
       {
          int y;
-         for (y = (H * S) - 1; y >= 0; y--)
+         for (y = ((H + 1) * S) - 1; y >= -1; y--)
          {
             int x;
-            for (x = 0; x < (W * S); x++)
-               printf ("%c", grid[W * (y / S) + (x / S)] ? '*' : ' ');
+            for (x = -1; x < ((W + 1) * S); x++)
+               printf ("%s", y < H * S && y >= 0 && x < W * S && x >= 0 && grid[W * (y / S) + (x / S)] ? " " : "█");
             printf ("\n");
          }
       }
