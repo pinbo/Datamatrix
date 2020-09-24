@@ -892,6 +892,7 @@ unsigned char *iec16022ecc200_opts(iec16022ecc200_t o)
       W = matrix->W;
       H = matrix->H;
    }
+   int q = (o.noquiet ? 0 : 1);
    if (!ecc200encode(binary, matrix->bytes, o.barcode, o.barcodelen, encoding, o.lenp))
       fprintf(stderr, "Barcode too long for %dx%d %s %u bytes\n", W, H, encoding, matrix->bytes);
    else
@@ -908,21 +909,21 @@ unsigned char *iec16022ecc200_opts(iec16022ecc200_t o)
          NR = H - 2 * (H / matrix->FH);
          places = safemalloc(NC * NR * sizeof(int));
          ecc200placement(places, NR, NC);
-         grid = safemalloc(W * H);
-         memset(grid, 0, W * H);
+         grid = safemalloc((W + q + q) * (H + q + q));
+         memset(grid, 0, (W + q + q) * (H + q + q));
          for (y = 0; y < H; y += matrix->FH)
          {
             for (x = 0; x < W; x++)
-               grid[y * W + x] = 1;
+               grid[(y + q) * (W + q + q) + q + x] = 1;
             for (x = 0; x < W; x += 2)
-               grid[(y + matrix->FH - 1) * W + x] = 1;
+               grid[(y + q + matrix->FH - 1) * (W + q + q) + q + x] = 1;
          }
          for (x = 0; x < W; x += matrix->FW)
          {
             for (y = 0; y < H; y++)
-               grid[y * W + x] = 1;
+               grid[(y + q) * (W + q + q) + q + x] = 1;
             for (y = 0; y < H; y += 2)
-               grid[y * W + x + matrix->FW - 1] = 1;
+               grid[(y + q) * (W + q + q) + q + x + matrix->FW - 1] = 1;
          }
          for (y = 0; y < NR; y++)
          {
@@ -931,7 +932,7 @@ unsigned char *iec16022ecc200_opts(iec16022ecc200_t o)
                int v = places[(NR - y - 1) * NC + x];
                //fprintf (stderr, "%4d", v);
                if (v == 1 || (v > 7 && (binary[(v >> 3) - 1] & (1 << (v & 7)))))
-                  grid[(1 + y + 2 * (y / (matrix->FH - 2))) * W + 1 + x + 2 * (x / (matrix->FW - 2))] = 1;
+                  grid[(1 + y + q + 2 * (y / (matrix->FH - 2))) * (W + q + q) + q + 1 + x + 2 * (x / (matrix->FW - 2))] = 1;
             }
             //fprintf (stderr, "\n");
          }
@@ -939,9 +940,9 @@ unsigned char *iec16022ecc200_opts(iec16022ecc200_t o)
       }
    }
    if (o.Wptr)
-      *o.Wptr = W;
+      *o.Wptr = W + q + q;
    if (o.Hptr)
-      *o.Hptr = H;
+      *o.Hptr = H + q + q;
    if (o.encodingptr)
       *o.encodingptr = encoding;
    if (o.maxp)

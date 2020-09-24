@@ -85,7 +85,8 @@ int main(int argc, const char *argv[])
    int len = 0,
        maxlen = 0,
        ecclen = 0,
-       square = 1;
+       square = 1,
+       noquiet = 0;;
    int formatcode = 0;
    double scale = -1,
        dpi = -1;
@@ -120,6 +121,7 @@ int main(int argc, const char *argv[])
       { "scale", 0, POPT_ARG_INT, &S, 0, "Scale", "pixels" },
       { "mm", 0, POPT_ARG_DOUBLE, &scale, 0, "Size of pixels", "mm" },
       { "dpi", 0, POPT_ARG_DOUBLE, &dpi, 0, "Size of pixels", "dpi" },
+      { "no-quiet", 'Q', POPT_ARG_NONE, &noquiet, 0, "No quiet area" },
       { "format", 'f', POPT_ARGFLAG_DOC_HIDDEN | POPT_ARG_STRING, &format, 0, "Output format",
        "x=size/t[s]=text/e[s]=EPS/b=bin/h[s]=hex/p[s]=PNG/g[s]=ps/v[s]=svg/s=stamp" },
 
@@ -288,14 +290,7 @@ int main(int argc, const char *argv[])
    if ((W & 1) || ecc < 200)
       errx(1, "Not done odd sizes yet, sorry\n");
    else
-   {                            // even sizes
-      if (square)
-      {
-         grid = iec16022ecc200(&W, &W, &encoding, barcodelen, (unsigned char *) barcode, &len, &maxlen, &ecclen);
-         H = W;
-      } else
-         grid = iec16022ecc200(&W, &H, &encoding, barcodelen, (unsigned char *) barcode, &len, &maxlen, &ecclen);
-   }
+    grid = iec16022ecc200(&W, &H, &encoding, barcodelen, (unsigned char *) barcode, &len, &maxlen, &ecclen, square: square, noquiet:noquiet);
 
    // output
    if (tolower(*format) != 'i' && (!grid || !W))
@@ -304,9 +299,9 @@ int main(int argc, const char *argv[])
    {
    case 'x':                   // Size in pixels including quite border
       if (square)
-         printf("%d", W + 2);   // unless specifically requested square, print two fields
+         printf("%d", W);       // unless specifically requested square, print two fields
       else
-         printf("%d %d", W + 2, H + 2);
+         printf("%d %d", W, H);
       break;
    case 'i':                   // info
       printf("Size    : %dx%d\n", W, H);
@@ -345,10 +340,10 @@ int main(int argc, const char *argv[])
    case 't':                   // text
       {
          int y;
-         for (y = ((H + 1) * S) - 1; y >= -1; y--)
+         for (y = (H * S) - 1; y >= 0; y--)
          {
             int x;
-            for (x = -1; x < ((W + 1) * S); x++)
+            for (x = 0; x < (W * S); x++)
                printf("%s", y < H * S && y >= 0 && x < W * S && x >= 0 && grid[W * (y / S) + (x / S)] ? " " : "█");
             printf("\n");
          }
@@ -356,13 +351,12 @@ int main(int argc, const char *argv[])
       break;
    case 'e':                   // EPS
       printf("%%!PS-Adobe-3.0 EPSF-3.0\n" "%%%%Creator: IEC18004 barcode/stamp generator\n" "%%%%BarcodeData: %s\n"
-             "%%%%BarcodeSize: %dx%d\n" "%%%%DocumentData: Clean7Bit\n" "%%%%LanguageLevel: 1\n"
-             "%%%%Pages: 1\n" "%%%%BoundingBox: 0 0 %d %d\n" "%%%%EndComments\n" "%%%%Page: 1 1\n", barcode, (W + 2) * S, (H + 2) * S, (int) ((double) (W + 2) * (scale * 72 / 25.4 ? : S) + .99), (int) ((double) (H + 2) * (scale * 72 / 25.4 ? : S) + 0.99));
+             "%%%%BarcodeSize: %dx%d\n" "%%%%DocumentData: Clean7Bit\n" "%%%%LanguageLevel: 1\n" "%%%%Pages: 1\n" "%%%%BoundingBox: 0 0 %d %d\n" "%%%%EndComments\n" "%%%%Page: 1 1\n", barcode, W * S, H * S, (int) ((double) W * (scale * 72 / 25.4 ? : S) + .99), (int) ((double) H * (scale * 72 / 25.4 ? : S) + 0.99));
    case 'g':                   // PS
       if (scale)
          printf("%.4f dup scale ", (scale * 72 / 25.4 / S));
-      printf("%d %d 1[1 0 0 1 0 0]{<\n", (W + 2) * S, (H + 2) * S);
-      dumphex(grid, W, H, 0xFF, S, 1);
+      printf("%d %d 1[1 0 0 1 0 0]{<\n", W * S, H * S);
+      dumphex(grid, W, H, 0xFF, S, 0);
       printf(">}image\n");
       break;
    case 's':                   // Stamp
@@ -391,7 +385,7 @@ int main(int argc, const char *argv[])
                 "%%%%BarcodeSize: %dx%d\n" "%%%%DocumentData: Clean7Bit\n" "%%%%LanguageLevel: 1\n"
                 "%%%%Pages: 1\n" "%%%%BoundingBox: 0 0 190 80\n" "%%%%EndComments\n" "%%%%Page: 1 1\n"
                 "save 10 dict begin/f{findfont exch scalefont setfont}bind def/rm/rmoveto load def/m/moveto load def/rl/rlineto load def\n"
-                "/l/lineto load def/cp/closepath load def/c{dup stringwidth pop -2 div 0 rmoveto show}bind def\n" "72 25.4 div dup scale 0 0 m 67 0 rl 0 28 rl -67 0 rl cp clip 1 setgray fill 0 setgray 0.5 0 translate 0.3 setlinewidth\n" "32 32 1[2 0 0 2 0 -11]{<\n", barcode, W, H);
+                "/l/lineto load def/cp/closepath load def/c{dup stringwidth pop -2 div 0 rmoveto show}bind def\n" "72 25.4 div dup scale 0 0 m 67 0 rl 0 28 rl -67 0 rl cp clip 1 setgray fill 0 setgray 0.5 0 translate 0.3 setlinewidth\n" "%d %d 1[1 0 0 1 0 -11]{<\n", barcode, W, H, W, H);
          dumphex(grid, W, H, 0xFF, 1, 0);
          printf(">}image\n" "3.25/Helvetica-Bold f 8 25.3 m(\\243%d.%02d)c\n" "2.6/Helvetica f 8 22.3 m(%.4s %.4s)c\n" "1.5/Helvetica f 8 3.3 m(POST BY)c\n" "3.3/Helvetica f 8 0.25 m(%02d.%02d.%02d)c\n", v / 100, v % 100, temp + 6, temp + 10, t.tm_mday, t.tm_mon + 1, t.tm_year % 100);
          if (c == '1' || c == '2' || c == 'A' || c == 'S')
@@ -437,13 +431,13 @@ int main(int argc, const char *argv[])
          int x,
           y;
          Image *i;
-         i = ImageNew(W + 2, H + 2, 2);
+         i = ImageNew(W, H, 2);
          i->Colour[0] = 0xFFFFFF;
          i->Colour[1] = 0;
          for (y = 0; y < H; y++)
             for (x = 0; x < W; x++)
                if (grid[(H - 1 - y) * W + x] & 1)
-                  ImagePixel(i, x + 1, H + 1 - y - 1) = 1;
+                  ImagePixel(i, x, H - y - 1) = 1;
          if (isupper(*format))
             ImageSVGPath(i, stdout, 1);
          else
@@ -456,13 +450,13 @@ int main(int argc, const char *argv[])
       {
          int x,
           y;
-         Image *i = ImageNew((W + 2) * S, (H + 2) * S, 2);
+         Image *i = ImageNew(W * S, H * S, 2);
          i->Colour[0] = 0xFFFFFF;
          i->Colour[1] = 0;
          for (y = 0; y < H * S; y++)
             for (x = 0; x < W * S; x++)
                if (grid[(y / S) * W + (x / S)])
-                  ImagePixel(i, x + S, ((H + 1) * S) - y - 1) = 1;
+                  ImagePixel(i, x, (H * S) - y - 1) = 1;
          if (*format == 'd')
          {
             char tmp[] = "/tmp/XXXXXX";
