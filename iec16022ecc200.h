@@ -23,6 +23,7 @@ typedef struct {
    unsigned int *lenp;          // Stores data length before any final unlatch or pad
    unsigned int *maxp;          // Stores max storage of this size code
    unsigned int *eccp;          // Stores the number of ecc bytes used in this size
+   unsigned char square:1;      // Force square (also setting Wptr==Hptr does this)
 } iec16022ecc200_t;
 #define iec16022ecc200(...) iec16022ecc200_opts((iec16022ecc200_t){__VA_ARGS__})
 unsigned char *iec16022ecc200_opts(iec16022ecc200_t);

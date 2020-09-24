@@ -862,7 +862,7 @@ unsigned char *iec16022ecc200_opts(iec16022ecc200_t o)
       if (encoding)
       {                         // find one that fits chosen encoding
          for (matrix = ecc200matrix; matrix->W; matrix++)
-            if (ecc200encode(binary, matrix->bytes, o.barcode, o.barcodelen, encoding, 0) && (matrix->W == matrix->H || !o.Wptr || o.Wptr != o.Hptr))
+            if (ecc200encode(binary, matrix->bytes, o.barcode, o.barcodelen, encoding, 0) && (matrix->W == matrix->H || !o.square && (!o.Wptr || o.Wptr != o.Hptr)))
                break;
       } else
       {
