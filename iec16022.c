@@ -146,7 +146,7 @@ int main(int argc, const char *argv[])
       *format = 'd';
    }
    if (outfile && strcmp(outfile, "-") && !freopen(outfile, "w", stdout))
-      err(1, outfile);
+      err(1, "%s", outfile);
    if (formatcode && format)
       errx(1, "--format is deprecated");
    char formatspace[2] = { };
@@ -179,10 +179,10 @@ int main(int argc, const char *argv[])
          f = fopen(infile, "rb");
       barcode = safemalloc(4001);
       if (!f)
-         err(1, infile);
+         err(1, "%s", infile);
       barcodelen = fread(barcode, 1, 4000, f);
       if (barcodelen < 0)
-         err(1, infile);
+         err(1, "%s", infile);
       barcode[barcodelen] = 0;  // null terminate anyway
       fclose(f);
    } else
