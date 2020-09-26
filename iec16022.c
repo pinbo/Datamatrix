@@ -85,7 +85,7 @@ int main(int argc, const char *argv[])
    int len = 0,
        maxlen = 0,
        ecclen = 0,
-       square = 1,
+       square = 0,
        noquiet = 0;;
    int formatcode = 0;
    double scale = -1,
@@ -94,7 +94,7 @@ int main(int argc, const char *argv[])
    unsigned char *grid = 0;
    poptContext optCon;          // context for parsing command-line options
    const struct poptOption optionsTable[] = {
-      { "size", 's', POPT_ARG_STRING, &size, 0, "Size", "WxH" },
+      { "fixed", 's', POPT_ARG_STRING, &size, 0, "Size", "WxH" },
       { "square", 'q', POPT_ARG_NONE, &square, 0, "Square", 0 },
       {
        "barcode", 'c', POPT_ARG_STRING, &barcode, 0, "Barcode", "text" },

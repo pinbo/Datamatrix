@@ -871,13 +871,13 @@ unsigned char *iec16022ecc200_opts(iec16022ecc200_t o)
          // Try exact encoding
          e = encmake(o.barcodelen, o.barcode, &len, 1);
          for (matrix = ecc200matrix; matrix->W; matrix++)
-            if (matrix->bytes == len && (matrix->W == matrix->H || !o.Wptr || o.Wptr != o.Hptr))
+            if (matrix->bytes == len && (matrix->W == matrix->H || !o.square && (!o.Wptr || o.Wptr != o.Hptr)))
                break;
          if (e && !matrix->W)
          {                      // try for non exact fit
             char *e = encmake(o.barcodelen, o.barcode, &len, 0);
             for (matrix = ecc200matrix; matrix->W; matrix++)
-               if (matrix->bytes > len && (matrix->W == matrix->H || !o.Wptr || o.Wptr != o.Hptr))
+               if (matrix->bytes > len && (matrix->W == matrix->H || !o.square && (!o.Wptr || o.Wptr != o.Hptr)))
                   break;
             if (e)
                free(e);
