@@ -40,7 +40,7 @@ void dumphex(unsigned char *grid, int W, int H, unsigned char p, int S, int B)
           b = 128;
       for (x = -B * S; x < (W + B) * S; x++)
       {
-         if (x >= 0 && x < W * S && y >= 0 && y < H * S && grid[(y / S) * W + (x / S)])
+         if (x >= 0 && x < W * S && y >= 0 && y < H * S && (grid[(H - 1 - y / S) * W + (x / S)] & 1))
             v |= b;
          b >>= 1;
          if (!b)
@@ -340,7 +340,7 @@ int main(int argc, const char *argv[])
    case 't':                   // text
       {
          int y;
-         for (y = (H * S) - 1; y >= 0; y--)
+         for (y = 0; y < H * S; y++)
          {
             int x;
             for (x = 0; x < (W * S); x++)
@@ -436,8 +436,8 @@ int main(int argc, const char *argv[])
          i->Colour[1] = 0;
          for (y = 0; y < H; y++)
             for (x = 0; x < W; x++)
-               if (grid[(H - 1 - y) * W + x] & 1)
-                  ImagePixel(i, x, H - y - 1) = 1;
+               if (grid[y * W + x] & 1)
+                  ImagePixel(i, x, y) = 1;
          if (isupper(*format))
             ImageSVGPath(i, stdout, 1);
          else
@@ -456,7 +456,7 @@ int main(int argc, const char *argv[])
          for (y = 0; y < H * S; y++)
             for (x = 0; x < W * S; x++)
                if (grid[(y / S) * W + (x / S)])
-                  ImagePixel(i, x, (H * S) - y - 1) = 1;
+                  ImagePixel(i, x, y) = 1;
          if (*format == 'd')
          {
             char tmp[] = "/tmp/XXXXXX";

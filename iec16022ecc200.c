@@ -914,27 +914,25 @@ unsigned char *iec16022ecc200_opts(iec16022ecc200_t o)
          for (y = 0; y < H; y += matrix->FH)
          {
             for (x = 0; x < W; x++)
-               grid[(y + q) * (W + q + q) + q + x] = 1;
-            for (x = 0; x < W; x += 2)
                grid[(y + q + matrix->FH - 1) * (W + q + q) + q + x] = 1;
+            for (x = 0; x < W; x += 2)
+               grid[(y + q) * (W + q + q) + q + x] = 1;
          }
          for (x = 0; x < W; x += matrix->FW)
          {
             for (y = 0; y < H; y++)
-               grid[(y + q) * (W + q + q) + q + x] = 1;
+               grid[(matrix->FH - 1 - y + q) * (W + q + q) + q + x] = 1;
             for (y = 0; y < H; y += 2)
-               grid[(y + q) * (W + q + q) + q + x + matrix->FW - 1] = 1;
+               grid[(matrix->FH - 1 - y + q) * (W + q + q) + q + x + matrix->FW - 1] = 1;
          }
          for (y = 0; y < NR; y++)
          {
             for (x = 0; x < NC; x++)
             {
-               int v = places[(NR - y - 1) * NC + x];
-               //fprintf (stderr, "%4d", v);
+               int v = places[y * NC + x];
                if (v == 1 || (v > 7 && (binary[(v >> 3) - 1] & (1 << (v & 7)))))
                   grid[(1 + y + q + 2 * (y / (matrix->FH - 2))) * (W + q + q) + q + 1 + x + 2 * (x / (matrix->FW - 2))] = 1;
             }
-            //fprintf (stderr, "\n");
          }
          free(places);
       }
